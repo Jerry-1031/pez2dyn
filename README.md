@@ -1,8 +1,12 @@
 # pez2dyn
-Convert Phigros chart(.pez) to [Dynode](https://dyn.iorinn.moe/) file(.dyn).
+Convert Phigros fanmade chart(.pez) to [Dynode](https://dyn.iorinn.moe/) file(.dyn).
 
-**Only tested on 2024 April Fool's Day Chart.**
+Tested:
++ 2024 April Fool's Day Chart
++ RinFall's Dan 1-3
+
+Features:
++ Support multiple bpm (2024/8/17 updated)
 
 TODO:
-+ Support multiple bpm
-+ Support formatVersion 3
++ Support formatVersion 3 (idk wtf it is)

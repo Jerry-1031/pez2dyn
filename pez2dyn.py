@@ -8,34 +8,65 @@ Open the output with Dynode, press F5 to export .xml file.
 '''
 
 # Change it yourself
-input_file_name = "0.json"
-output_file_name = "out.dyn"
+input_file_name = "1.json"
+output_file_name = "1.dyn"
 
 # music_name = "0.ogg"
 # Automatic detect music name
 
 # {line1: side1, line2: side2, ...}
 # sides: 0 = down, 1 = left, 2 = right
-linelist = {24: 0, 5: 1, 26: 1, 4: 2, 25: 2}
+# Example(autoDetect = False): linelist = {0: 0, 24: 1, 25: 2}
+
+linelist = {}
+autoDetect = True
 
 DYNODE_VERSION = "v0.1.13.2"
 
-bpm = 120.
-startTime = 0.
-meter = 4
-
-def convertTime(a):
-	t = 60000 / bpm * (a[0] + a[1] / a[2]) + startTime
-	return t
-
+lineNotesCount = {}
 def notesCount(lines):
 	sum = 0
 	i = 0
 	for line in lines:
+		lineNotesCount[i] = line["numOfNotes"]
 		sum += line["numOfNotes"]
-		print(i, line["numOfNotes"])
+		if autoDetect and line["numOfNotes"] != 0:
+			linelist[i] = 0
 		i += 1
 	return sum
+
+import json
+
+file = open(input_file_name, 'r')
+content = file.read()
+
+text = json.loads(content)
+lines = text["judgeLineList"]
+
+print("Total Notes Count:", notesCount(lines))
+print(lineNotesCount)
+print(linelist)
+
+BPMList = text["BPMList"]
+bpmlist = []
+starttimelist = []
+
+BPMListLen = len(BPMList)
+BPMList[0]["nowTime"] = 0.
+now_time = 0.
+for i in range(1, BPMListLen):
+	BPMList[i]["nowTime"] = BPMList[i - 1]["nowTime"] + 60000. / BPMList[i - 1]["bpm"] * (BPMList[i]["startTime"][0] - BPMList[i - 1]["startTime"][0])
+
+print(BPMList)
+
+def convertTime(a):
+	for i in range(BPMListLen + 1):
+		if i == BPMListLen or a < BPMList[i]["startTime"]:
+			return BPMList[i - 1]["nowTime"] + 60000. / BPMList[i - 1]["bpm"] * ((a[0] - BPMList[i - 1]["startTime"][0]) + a[1] / a[2])
+
+bpm = text["BPMList"][0]["bpm"]
+startTime = convertTime(text["BPMList"][0]["startTime"])
+meter = 4
 
 ds = []
 def addLineNotes(l, side = 0):
@@ -72,18 +103,6 @@ def addLineNotes(l, side = 0):
 		ds.append(d)
 	return [minp, maxp]
 
-import json
-
-file = open(input_file_name, 'r')
-content = file.read()
-
-text = json.loads(content)
-lines = text["judgeLineList"]
-
-notesCount(lines)
-
-bpm = text["BPMList"][0]["bpm"]
-startTime = convertTime(text["BPMList"][0]["startTime"])
 
 for id, s in linelist.items():
 	addLineNotes(lines[id], s)
@@ -102,11 +121,18 @@ charts["bpm"] = bpm
 charts["barpm"] = bpm / meter
 res["charts"] = charts
 
-timingPoints = {}
-timingPoints["beatLength"] = 60000 / bpm
-timingPoints["time"] = startTime
-timingPoints["meter"] = meter
-res["timingPoints"] = [timingPoints]
+timingPoints = []
+for b in BPMList:
+	timingPoint = {}
+	timingPoint["meter"] = meter
+	timingPoint["time"] = b["nowTime"]
+	timingPoint["beatLength"] = 60000 / b["bpm"]
+	timingPoints.append(timingPoint)
+
+res["timingPoints"] = timingPoints
 
 output = open(output_file_name, 'w')
 output.write(json.dumps(res, sort_keys = True))
+
+print("Convert Success.")
+print("Output File Name:", output_file_name)
